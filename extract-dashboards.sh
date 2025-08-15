@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Fetch all Grafana dashboards via the Grafana Operator API and store each one
+# Simple script to fetch all Grafana dashboards via the Grafana Operator API and store each one
 # as a JSON file under the directory defined by FOLDER.
 GRAFANA_AUTH=pinax:eosneosn
 GRAFANA_URL=grafana.monitor.riv-monitor1.pinax.io
