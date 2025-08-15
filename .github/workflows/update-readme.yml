@@ -1,0 +1,19 @@
+name: Update README with scripts
+
+on:
+  push:
+
+jobs:
+  update-readme:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Update README
+        run: |
+          python update_readme.py
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain)" ]; then
+            git commit -am "chore: update README with scripts"
+            git push
+          fi
