@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Download a single Grafana dashboard from the Grafana Operator API and save it
+# to the FOLDER directory as a JSON file. Useful for syncing the status page.
 GRAFANA_AUTH=pinax:eosneosn
 GRAFANA_URL=grafana.monitor.riv-monitor1.pinax.io
 FOLDER=dashboard-result

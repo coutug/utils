@@ -1,4 +1,6 @@
 #!/bin/bash
+# Send a test alert to a local Alertmanager instance, repeatedly firing until
+# the user resolves it, to verify alert delivery and routing.
 url='http://localhost:9093/api/v2/alerts'
 
 declare -A ALERT_LABELS=(

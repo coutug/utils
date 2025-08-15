@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# Iterate over all *.enc and *.env files in the tree and refresh their SOPS
+# encryption keys using `sops updatekeys`.
 DIR=$(pwd)
 echo "running from $DIR"
 shopt -s nullglob
