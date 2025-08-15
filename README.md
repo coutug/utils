@@ -2,7 +2,7 @@
 Useful scripts collection built along the journey
 
 ## extract-dashboards.sh
-Fetch all Grafana dashboards via the Grafana Operator API and store each one as a JSON file under the directory defined by FOLDER.
+Simple script to fetch all Grafana dashboards via the Grafana Operator API and store each one as a JSON file under the directory defined by FOLDER.
 
 ## rename.sh
 Rename every file and directory under ./the-graph to lowercase while preserving the directory structure. Existing lowercase targets are skipped to avoid overwriting.
