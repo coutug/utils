@@ -3,6 +3,9 @@ name: Update README with scripts
 on:
   push:
 
+permissions:
+  contents: write
+
 jobs:
   update-readme:
     runs-on: ubuntu-latest
