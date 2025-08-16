@@ -1,6 +1,9 @@
 # utils
 Useful scripts collection built along the journey
 
+## clean-ns.sh
+No description available
+
 ## extract-dashboards.sh
 Simple script to fetch all Grafana dashboards via the Grafana Operator API and store each one as a JSON file under the directory defined by FOLDER.
 
