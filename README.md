@@ -2,7 +2,7 @@
 Useful scripts collection built along the journey
 
 ## clean-ns.sh
-No description available
+Interactively delete all namespaced Kubernetes resources in the specified namespace and clear finalizers.
 
 ## extract-dashboards.sh
 Simple script to fetch all Grafana dashboards via the Grafana Operator API and store each one as a JSON file under the directory defined by FOLDER.

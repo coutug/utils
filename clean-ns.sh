@@ -1,3 +1,7 @@
+#!/usr/bin/env bash
+
+# Interactively delete all namespaced Kubernetes resources in the specified namespace and clear finalizers.
+
 NS=$1
 
 echo "Namespace: $NS"
