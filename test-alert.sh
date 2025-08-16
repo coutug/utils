@@ -4,10 +4,11 @@
 url='http://localhost:9093/api/v2/alerts'
 
 declare -A ALERT_LABELS=(
-  [alertname]="test-tokenAPI"
-  [alertgroup]="test-tokenAPI"
-  [component]="token_api_sink"
-  [cluster]="riv-test"
+  [alertname]="TEST-tokenAPI"
+  [alertgroup]="TEST-tokenAPI"
+  [component]="token-api-sink"
+  [cluster]="riv-prod1"
+  [network]="avalanche"
 )
 
 summary='Testing summary!'
