@@ -19,6 +19,9 @@ Send a test alert to a local Alertmanager instance, repeatedly firing until the 
 ## update-sops.sh
 Iterate over all *.enc and *.env files in the tree and refresh their SOPS encryption keys using `sops updatekeys`.
 
+## conf2vmrule.py
+conf2vmrule.py Convert a simple Icinga-style .conf service definition using a Prometheus check into a VictoriaMetrics VMRule YAML.
+
 ## rework_dashboards.py
 Rework Grafana dashboard JSON files: - If file has {"dashboard": {...}, "meta": {...}}, unwrap to just {...} (the "dashboard" content). - Ensure a templating variable of type "datasource" named DS_PROMETHEUS pointing to VictoriaMetrics-ops. - Replace all "datasource" fields (object or string) across the dashboard with "${DS_PROMETHEUS}", skipping Grafana's internal annotation datasource objects ({"type":"datasource","uid":"grafana"}). By default, only objects are rewritten conservatively when they are Prometheus-like; use --all-sources to rewrite string datasources too.
 
