@@ -1,159 +1,189 @@
 #!/usr/bin/env bash
-# =============================================================================
-# Script : dedupe-arch-vs-hm.sh
-#
-# Description :
-#   Ce script détecte les paquets qui sont installés à la fois via Arch Linux
-#   (pacman/yay) et via Nix Home-Manager (flakes). Pour chaque doublon trouvé,
-#   il propose de désinstaller la version Arch afin d’éviter les conflits et
-#   doublons entre les deux systèmes de gestion de paquets.
-#
-# Fonctionnement :
-#   1. Récupère la liste des paquets installés explicitement par pacman/yay.
-#   2. Récupère la liste des paquets déclarés dans ta configuration
-#      Home-Manager (flake).
-#   3. Fait l’intersection des deux listes, avec un petit mappage de noms
-#      pour les paquets qui diffèrent entre Nix et Arch (ex. helm, yq, zoom).
-#   4. Parcourt les doublons un par un et demande confirmation avant de lancer
-#      la désinstallation du paquet côté Arch (yay -Rns ou pacman -Rns).
-#
-# Utilisation :
-#   - Par défaut (dans le dossier de ton flake HM) :
-#       ./dedupe-arch-vs-hm.sh
-#
-#   - Flake + nœud HM explicite :
-#       FLAKE_REF=~/config/home-manager HM_NODE="gabriel@pc-gabriel" ./dedupe-arch-vs-hm.sh
-#
-#   - Mode non-interactif (désinstalle tout sans confirmation) :
-#       ASSUME_YES=1 ./dedupe-arch-vs-hm.sh
-#
-#   - Mode simulation (ne supprime rien, affiche seulement les commandes) :
-#       DRY_RUN=1 ./dedupe-arch-vs-hm.sh
-#
-# Prérequis :
-#   - jq (pour parser la sortie JSON de nix eval)
-#   - yay ou pacman
-#   - Nix avec Home-Manager (flakes)
-# =============================================================================
+# Désinstalle (optionnellement) les paquets Arch qui sont aussi gérés par Home‑Manager (Nix).
+# Prérequis: yay (ou pacman) et home-manager.
+# Options:
+#   --yes / -y    : ne pas demander de confirmation, désinstaller directement
+#   --dry-run     : n'affiche que la liste, ne désinstalle rien
+#   --include-yay : autorise la désinstallation de 'yay' s'il est en doublon (par défaut, on l'ignore)
 
-set -euo pipefail
+set -u
+set -o pipefail
 
-# === Config par défaut ===
-FLAKE_REF="${FLAKE_REF:-.}"                    # ex: .  ou  ~/dotfiles
-HM_NODE="${HM_NODE:-$USER@$(hostname)}"        # ex: gabriel@pc-gabriel
-ASSUME_YES="${ASSUME_YES:-0}"                  # 1 = ne pas demander confirmation
-DRY_RUN="${DRY_RUN:-0}"                        # 1 = n'exécute pas les suppressions
+CONFIRM=1
+DRYRUN=0
+INCLUDE_YAY=0
 
-# === Détection yay/pacman ===
-if command -v yay >/dev/null 2>&1; then
-  PM="yay"
-  REMOVE_CMD=(yay -Rns)
+while (( "$#" )); do
+  case "$1" in
+    --yes|-y) CONFIRM=0; shift ;;
+    --dry-run) DRYRUN=1; shift ;;
+    --include-yay) INCLUDE_YAY=1; shift ;;
+    -h|--help)
+      echo "Usage: $0 [--yes|-y] [--dry-run] [--include-yay]"
+      exit 0
+      ;;
+    *)
+      echo "Option inconnue: $1" >&2
+      exit 2
+      ;;
+  esac
+done
+
+have_cmd() { command -v "$1" >/dev/null 2>&1; }
+
+# 1) Récupérer les paquets Arch explicitement installés (AUR inclus)
+if have_cmd yay; then
+  mapfile -t ARCH_PKGS < <(yay -Qqe 2>/dev/null | sort -u)
+elif have_cmd pacman; then
+  mapfile -t ARCH_PKGS < <(pacman -Qqe 2>/dev/null | sort -u)
 else
-  PM="pacman"
-  REMOVE_CMD=(sudo pacman -Rns)
-fi
-
-echo ">> Gestionnaire AUR: $PM"
-echo ">> Flake: $FLAKE_REF  |  Home-Manager node: $HM_NODE"
-echo
-
-# === 1) Paquets Arch (explicites) ===
-echo ">> Récupération des paquets Arch installés explicitement…"
-if [[ "$PM" == "yay" ]]; then
-  mapfile -t ARCH_PKGS < <(yay -Qqe | sort -u)
-else
-  mapfile -t ARCH_PKGS < <(pacman -Qqe | sort -u)
-fi
-echo "   → ${#ARCH_PKGS[@]} paquets (Arch)"
-
-# === 2) Paquets Home-Manager ===
-# On évalue la liste des derivations home.packages et on en extrait un "nom logique".
-# - p.pname si dispo
-# - sinon parseDrvName p.name (pour séparer nom vs version)
-echo ">> Évaluation des paquets Home-Manager (flakes)…"
-NIX_EXPR='builtins.map (p: (p.pname or (builtins.parseDrvName p.name).name))'
-NIX_ATTR="$FLAKE_REF#homeConfigurations.$HM_NODE.config.home.packages"
-
-# Sortie : JSON array de strings
-HM_JSON=$(nix eval --json "$NIX_ATTR" --apply "$NIX_EXPR")
-# Convertir JSON → lignes (jq requis)
-if ! command -v jq >/dev/null 2>&1; then
-  echo "ERREUR: jq est requis (pacman -S jq / yay -S jq)."
+  echo "Erreur: ni 'yay' ni 'pacman' n'ont été trouvés dans le PATH." >&2
   exit 1
 fi
-mapfile -t HM_PKGS < <(printf '%s' "$HM_JSON" | jq -r '.[]' | sort -u)
-echo "   → ${#HM_PKGS[@]} paquets (Home-Manager)"
 
-# === 3) Mappage Nix → Arch (noms divergents) ===
-# Ajoute ici tes overrides si besoin.
-# clé = nom dans Nix/HM ; valeur = nom du paquet Arch correspondant.
-declare -A NAME_MAP=(
-  # exemples fréquents :
-  [kubernetes-helm]="helm"
-  [yq-go]="go-yq"
-  [zoom-us]="zoom"
-  # [qbittorrent-enhanced]="qbittorrent-enhanced"   # identique (exemple)
-  # [github-cli]="github-cli"                       # identique (exemple)
+# 2) Récupérer les paquets Home‑Manager installés (sans version)
+if ! have_cmd home-manager; then
+  echo "Erreur: 'home-manager' n'est pas dans le PATH." >&2
+  exit 1
+fi
+
+# home-manager packages retourne des noms du type 'act-0.2.77' (ou parfois des chemins .drv).
+# On garde juste le nom sans version.
+mapfile -t HM_PKGS < <(
+  home-manager packages \
+  | sed -E 's#.*/##' \
+  | sed -E 's/\.drv$//' \
+  | sed -E 's/-[0-9][0-9A-Za-z._+~-]*$//' \
+  | sed '/^$/d' \
+  | sort -u
 )
 
-# Applique le mapping à la liste HM
-map_hm_to_arch() {
-  local n="$1"
-  if [[ -n "${NAME_MAP[$n]+x}" ]]; then
-    printf '%s\n' "${NAME_MAP[$n]}"
-  else
-    printf '%s\n' "$n"
+# 3) Mapping Nix -> Arch pour les noms divergents
+#    Ajoute ici tes correspondances perso si besoin.
+declare -A MAP_NIX_TO_ARCH=(
+  # Nix                  Arch
+  [kubernetes-helm]=helm
+  [yq-go]=go-yq
+  [zoom-us]=zoom
+  [kubelogin-oidc]=kubelogin
+  [qbittorrent-enhanced]=qbittorrent
+)
+
+# Ensemble de paquets Arch pour lookup O(1)
+declare -A ARCH_SET=()
+for p in "${ARCH_PKGS[@]}"; do
+  ARCH_SET["$p"]=1
+done
+
+# Fonction de résolution du nom Arch à partir du nom Nix
+resolve_arch_name() {
+  local nix="$1"
+  local cand="${MAP_NIX_TO_ARCH[$nix]:-$nix}"
+
+  # direct
+  if [[ -n "${ARCH_SET[$cand]:-}" ]]; then
+    echo "$cand"
+    return 0
   fi
+
+  # variantes fréquentes sur Arch/AUR
+  local v
+  for v in "$cand-bin" "$cand-git" "$cand-bin-git"; do
+    if [[ -n "${ARCH_SET[$v]:-}" ]]; then
+      echo "$v"
+      return 0
+    fi
+  done
+
+  return 1
 }
 
-# === 4) Construire des sets pour l'intersection ===
-declare -A SET_ARCH=()
-for p in "${ARCH_PKGS[@]}"; do
-  SET_ARCH["$p"]=1
-done
+# 4) Calcul des doublons (Arch <-> Nix)
+declare -a DUP_ARCH=()
+declare -a DUP_NIX=()
 
-DUPES=()
-for n in "${HM_PKGS[@]}"; do
-  a_name="$(map_hm_to_arch "$n")"
-  # ignore vide
-  [[ -z "$a_name" ]] && continue
-  if [[ -n "${SET_ARCH[$a_name]+x}" ]]; then
-    DUPES+=("$a_name")
+for nix in "${HM_PKGS[@]}"; do
+  if arch_name="$(resolve_arch_name "$nix")"; then
+    # Protéger 'yay' par défaut (on l'affichera mais on ne le supprimera pas sauf --include-yay)
+    if [[ "$arch_name" == "yay" && $INCLUDE_YAY -eq 0 ]]; then
+      :
+    fi
+    DUP_ARCH+=("$arch_name")
+    DUP_NIX+=("$nix")
   fi
 done
 
-# Uniques + tri
-mapfile -t DUPES < <(printf '%s\n' "${DUPES[@]}" | sort -u)
+# Dédupliquer en gardant l'alignement Arch<->Nix
+declare -A seen=()
+declare -a U_ARCH=()
+declare -a U_NIX=()
+for i in "${!DUP_ARCH[@]}"; do
+  key="${DUP_ARCH[$i]}|${DUP_NIX[$i]}"
+  if [[ -z "${seen[$key]:-}" ]]; then
+    seen[$key]=1
+    U_ARCH+=("${DUP_ARCH[$i]}")
+    U_NIX+=("${DUP_NIX[$i]}")
+  fi
+done
 
-echo
-echo "==> Doublons (installés à la fois via Arch et listés par Home-Manager): ${#DUPES[@]}"
-printf '    %s\n' "${DUPES[@]}" || true
-echo
-
-if [[ ${#DUPES[@]} -eq 0 ]]; then
-  echo "Aucun doublon détecté. 👍"
+if [[ ${#U_ARCH[@]} -eq 0 ]]; then
+  echo "Aucun doublon Arch/Home‑Manager détecté 🎉"
   exit 0
 fi
 
-# === 5) Désinstallation interactive (ou non) ===
-for pkg in "${DUPES[@]}"; do
-  if [[ "$ASSUME_YES" != "1" ]]; then
-    read -rp "Supprimer \"$pkg\" via ${REMOVE_CMD[*]} ? [y/N] " ans
-    case "${ans:-}" in
-      y|Y|yes|YES) ;;
-      *) echo "   → ignoré: $pkg"; continue ;;
-    esac
-  fi
-
-  echo "   → suppression: $pkg"
-  if [[ "$DRY_RUN" == "1" ]]; then
-    echo "      (DRY_RUN) ${REMOVE_CMD[*]} $pkg"
-  else
-    "${REMOVE_CMD[@]}" "$pkg"
-  fi
+# 5) Affichage demandé: "Arch -> Nix"
+echo "Doublons détectés (Arch -> Nix):"
+for i in "${!U_ARCH[@]}"; do
+  printf "  %s -> %s\n" "${U_ARCH[$i]}" "${U_NIX[$i]}"
 done
 
-echo
-echo "Terminé."
-echo "Astuce: relance 'home-manager switch --flake $FLAKE_REF#$HM_NODE' après ménage si besoin."
+# Préparer la liste pour désinstallation (en excluant 'yay' sauf --include-yay)
+declare -a TO_REMOVE=()
+for i in "${!U_ARCH[@]}"; do
+  if [[ "${U_ARCH[$i]}" == "yay" && $INCLUDE_YAY -eq 0 ]]; then
+    continue
+  fi
+  TO_REMOVE+=("${U_ARCH[$i]}")
+done
 
+if [[ ${#TO_REMOVE[@]} -eq 0 ]]; then
+  echo
+  echo "Rien à désinstaller (ou seulement 'yay', ignoré par défaut)."
+  exit 0
+fi
+
+echo
+echo "Total à désinstaller côté Arch: ${#TO_REMOVE[@]} paquet(s)"
+printf '  %s\n' "${TO_REMOVE[@]}"
+
+if [[ $DRYRUN -eq 1 ]]; then
+  echo
+  echo "[Dry‑run] Aucune désinstallation ne sera effectuée."
+  exit 0
+fi
+
+if [[ $CONFIRM -ne 0 ]]; then
+  read -r -p "Confirmer la désinstallation via 'yay -Rns' ? [y/N] " ans
+  case "$ans" in
+    y|Y|yes|YES) ;;
+    *) echo "Annulé."; exit 0 ;;
+  esac
+fi
+
+# 6) Désinstallation
+if have_cmd yay; then
+  # On met 'yay' en dernier si --include-yay est activé (sécurité)
+  if [[ $INCLUDE_YAY -eq 1 ]]; then
+    # séparer 'yay' du reste
+    declare -a NOYAY=() YAYLAST=()
+    for p in "${TO_REMOVE[@]}"; do
+      if [[ "$p" == "yay" ]]; then YAYLAST+=("$p"); else NOYAY+=("$p"); fi
+    done
+    TO_REMOVE=("${NOYAY[@]}" "${YAYLAST[@]}")
+  fi
+  yay -Rns "${TO_REMOVE[@]}"
+else
+  # Fallback pacman (pour paquets officiels seulement)
+  echo "Avertissement: 'yay' introuvable, fallback vers 'sudo pacman -Rns'."
+  sudo pacman -Rns "${TO_REMOVE[@]}"
+fi
