@@ -1,6 +1,9 @@
 # utils
 Useful scripts collection built along the journey
 
+## TEST-test-probe.sh
+Config par variables d'env (modifiables au lancement)
+
 ## clean-ns.sh
 Interactively delete all namespaced Kubernetes resources in the specified namespace and clear finalizers.
 
