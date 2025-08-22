@@ -1,13 +1,8 @@
 #!/usr/bin/env python3
 """
-conf2vmrule.py
-Convert a simple Icinga-style .conf service definition using a Prometheus check
-into a VictoriaMetrics VMRule YAML.
-
-Usage:
-  python3 conf2vmrule.py /path/to/myAlert.conf            # dry-run to stdout
-  python3 conf2vmrule.py /path/to/myAlert.conf --write    # write /path/to/myAlert.yaml
-  python3 conf2vmrule.py /path/to/myAlert.conf -o out.yaml
+Description: Convert an Icinga-style .conf service definition using a Prometheus check into a VictoriaMetrics VMRule YAML.
+Functioning: Extracts metric details and thresholds from the .conf file, cleans label matchers, and builds a VMRule expression.
+How to use: python3 conf2vmrule.py /path/to/myAlert.conf [--write | -o out.yaml]
 
 Notes & assumptions:
 - Expects variables like:
@@ -18,11 +13,11 @@ Notes & assumptions:
 - Thresholds like "0:10000000000" will use the right side (upper bound).
   If a single number is provided, it's used as-is.
 - If check_prometheus_metric_name is missing, falls back to the Service name.
-- The YAML expr uses the *query* (after cleaning variable-based label filters)
+- The YAML expr uses the query (after cleaning variable-based label filters)
   as the left-hand side, e.g. `round(metric, 0.1) > 123`.
 
 Label cleaning rules:
-- Any label matcher whose VALUE contains a variable placeholder is removed.
+- Any label matcher whose value contains a variable placeholder is removed.
   Recognized placeholders: %VAR%, {{var}}, $VAR, ${VAR}
 - If the label set becomes empty after removals, the entire `{ ... }` is dropped.
 """

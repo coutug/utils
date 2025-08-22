@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-# Interactively delete all namespaced Kubernetes resources in the specified namespace and clear finalizers.
+# Description: Interactively delete all namespaced Kubernetes resources in a namespace and clear finalizers.
+# Functioning: Lists each resource type, prompts for deletion, deletes resources, and removes finalizers.
+# How to use: Run with the namespace as the first argument.
 
 NS=$1
 
