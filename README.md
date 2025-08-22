@@ -7,6 +7,9 @@ Interactively delete all namespaced Kubernetes resources in the specified namesp
 ## extract-dashboards.sh
 Simple script to fetch all Grafana dashboards via the Grafana Operator API and store each one as a JSON file under the directory defined by FOLDER.
 
+## migration-arch-nix.sh
+============================================================================= Script : dedupe-arch-vs-hm.sh  Description : Ce script détecte les paquets qui sont installés à la fois via Arch Linux (pacman/yay) et via Nix Home-Manager (flakes). Pour chaque doublon trouvé, il propose de désinstaller la version Arch afin d’éviter les conflits et doublons entre les deux systèmes de gestion de paquets.  Fonctionnement : 1. Récupère la liste des paquets installés explicitement par pacman/yay. 2. Récupère la liste des paquets déclarés dans ta configuration Home-Manager (flake). 3. Fait l’intersection des deux listes, avec un petit mappage de noms pour les paquets qui diffèrent entre Nix et Arch (ex. helm, yq, zoom). 4. Parcourt les doublons un par un et demande confirmation avant de lancer la désinstallation du paquet côté Arch (yay -Rns ou pacman -Rns).  Utilisation : - Par défaut (dans le dossier de ton flake HM) : ./dedupe-arch-vs-hm.sh  - Flake + nœud HM explicite : FLAKE_REF=~/config/home-manager HM_NODE="gabriel@pc-gabriel" ./dedupe-arch-vs-hm.sh  - Mode non-interactif (désinstalle tout sans confirmation) : ASSUME_YES=1 ./dedupe-arch-vs-hm.sh  - Mode simulation (ne supprime rien, affiche seulement les commandes) : DRY_RUN=1 ./dedupe-arch-vs-hm.sh  Prérequis : - jq (pour parser la sortie JSON de nix eval) - yay ou pacman - Nix avec Home-Manager (flakes) =============================================================================
+
 ## rename.sh
 Rename every file and directory under ./the-graph to lowercase while preserving the directory structure. Existing lowercase targets are skipped to avoid overwriting.
 
