@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-# Rename every file and directory under ./the-graph to lowercase while
-# preserving the directory structure. Existing lowercase targets are skipped to
-# avoid overwriting.
+# Description: Rename all files and directories under ./the-graph to lowercase without overwriting existing entries.
+# Functioning: Traverses the directory tree and renames each item to its lowercase counterpart if the destination does not exist.
+# How to use: Run without arguments from the repository root; it operates on ./the-graph.
 for SRC in $(find ./the-graph -depth)
 do
     DST=$(dirname "${SRC}")/$(basename "${SRC}" | tr '[A-Z]' '[a-z]')

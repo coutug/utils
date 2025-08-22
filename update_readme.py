@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Generate README listing all scripts with descriptions.
-
-Scans the repository for Python and shell scripts in the root directory and
-updates README.md so that each script is listed with a ``##`` header followed by
-its description.
+"""
+Description: Generate README listing all scripts with descriptions.
+Functioning: Scans root for shell and Python scripts, extracts their description blocks, and writes README.md.
+How to use: Run `python update_readme.py` from the repository root.
 """
 
 import ast
@@ -17,32 +16,39 @@ README_HEADER = "# utils\nUseful scripts collection built along the journey\n"
 
 
 def extract_description(path: Path) -> str:
-    """Return the leading comment or docstring describing the script."""
+    """Return the standardized description block for the script."""
+    lines: list[str] = []
     if path.suffix == ".py":
         with path.open("r", encoding="utf-8") as f:
             try:
                 module = ast.parse(f.read())
                 doc = ast.get_docstring(module)
                 if doc:
-                    first_paragraph = doc.strip().split("\n\n", 1)[0]
-                    return " ".join(line.strip() for line in first_paragraph.splitlines())
+                    lines = [l.strip() for l in doc.strip().splitlines() if l.strip()]
             except SyntaxError:
                 pass
-        # Fallback to comments if no docstring
-    desc_lines = []
-    with path.open("r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line.startswith("#!"):
-                continue
-            if line.startswith("#"):
-                desc_lines.append(line.lstrip("# "))
-            elif desc_lines and line == "":
+    if not lines:
+        with path.open("r", encoding="utf-8") as f:
+            for line in f:
+                s = line.strip()
+                if s.startswith("#!"):
+                    continue
+                if s.startswith("#"):
+                    lines.append(s.lstrip("# "))
+                elif lines and s == "":
+                    break
+                elif lines:
+                    break
+    fields = []
+    for key in ("Description:", "Functioning:", "How to use:"):
+        for l in lines:
+            if l.startswith(key):
+                fields.append(l)
                 break
-            elif desc_lines:
-                break
-        if desc_lines:
-            return " ".join(l.strip() for l in desc_lines)
+    if fields:
+        return "\n".join(fields)
+    if lines:
+        return " ".join(lines)
     return "No description available"
 
 

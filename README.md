@@ -1,36 +1,58 @@
 # utils
 Useful scripts collection built along the journey
 
-## TEST-test-probe.sh
-Config par variables d'env (modifiables au lancement)
-
 ## clean-ns.sh
-Interactively delete all namespaced Kubernetes resources in the specified namespace and clear finalizers.
+Description: Interactively delete all namespaced Kubernetes resources in a namespace and clear finalizers.
+Functioning: Lists each resource type, prompts for deletion, deletes resources, and removes finalizers.
+How to use: Run with the namespace as the first argument.
 
 ## extract-dashboards.sh
-Simple script to fetch all Grafana dashboards via the Grafana Operator API and store each one as a JSON file under the directory defined by FOLDER.
+Description: Fetch all Grafana dashboards via the Grafana Operator API and save them as JSON files.
+Functioning: Queries the API, iterates over dashboards, and writes each spec to FOLDER/<title>.json.
+How to use: Set GRAFANA_AUTH, GRAFANA_URL, and FOLDER variables then run the script.
 
-## migration-arch-nix.sh
-Désinstalle (optionnellement) les paquets Arch qui sont aussi gérés par Home‑Manager (Nix). Prérequis: yay (ou pacman) et home-manager. Options: --yes / -y    : ne pas demander de confirmation, désinstaller directement --dry-run     : n'affiche que la liste, ne désinstalle rien --include-yay : autorise la désinstallation de 'yay' s'il est en doublon (par défaut, on l'ignore)
+## migrate-arch-nix.sh
+Description: Uninstall Arch packages that are also managed by Home‑Manager.
+Functioning: Collects Arch and Home‑Manager packages, maps names, optionally prompts, and removes duplicates.
+How to use: Requires yay (or pacman) and home-manager. Options: --yes/-y skip confirmation, --dry-run show only, --include-yay allow removing 'yay'.
 
 ## rename.sh
-Rename every file and directory under ./the-graph to lowercase while preserving the directory structure. Existing lowercase targets are skipped to avoid overwriting.
+Description: Rename all files and directories under ./the-graph to lowercase without overwriting existing entries.
+Functioning: Traverses the directory tree and renames each item to its lowercase counterpart if the destination does not exist.
+How to use: Run without arguments from the repository root; it operates on ./the-graph.
 
 ## status-page-sync.sh
-Download a single Grafana dashboard from the Grafana Operator API and save it to the FOLDER directory as a JSON file. Useful for syncing the status page.
+Description: Download a single Grafana dashboard and save it as JSON for status page syncing.
+Functioning: Queries the Grafana Operator API for one dashboard and writes it to FOLDER/<title>.json.
+How to use: Set GRAFANA_AUTH, GRAFANA_URL, and FOLDER variables then run the script.
 
 ## test-alert.sh
-Send a test alert to a local Alertmanager instance, repeatedly firing until the user resolves it, to verify alert delivery and routing.
+Description: Send a test alert to a local Alertmanager to verify delivery and routing.
+Functioning: Fires an alert, repeats until the user resolves it, and then sends a resolve notification.
+How to use: Run without arguments or pass a severity as the first argument.
+
+## test-probe.sh
+Description: Continuously probe a list of URLs with hey and report HTTP code distribution.
+Functioning: Loops through URLs, runs hey with configured parameters, parses the status codes, and logs results.
+How to use: Optionally set HEY_BIN, SLEEP_SEC, NREQ, and CONCURRENCY environment variables before running.
 
 ## update-sops.sh
-Iterate over all *.enc and *.env files in the tree and refresh their SOPS encryption keys using `sops updatekeys`.
+Description: Refresh SOPS encryption keys for all *.enc and *.env files recursively.
+Functioning: Finds matching files, runs `sops updatekeys` on each, and returns to the starting directory.
+How to use: Run from the repository root; requires `sops` in the PATH.
 
 ## conf2vmrule.py
-conf2vmrule.py Convert a simple Icinga-style .conf service definition using a Prometheus check into a VictoriaMetrics VMRule YAML.
+Description: Convert an Icinga-style .conf service definition using a Prometheus check into a VictoriaMetrics VMRule YAML.
+Functioning: Extracts metric details and thresholds from the .conf file, cleans label matchers, and builds a VMRule expression.
+How to use: python3 conf2vmrule.py /path/to/myAlert.conf [--write | -o out.yaml]
 
 ## rework_dashboards.py
-Rework Grafana dashboard JSON files: - If file has {"dashboard": {...}, "meta": {...}}, unwrap to just {...} (the "dashboard" content). - Ensure a templating variable of type "datasource" named DS_PROMETHEUS pointing to VictoriaMetrics-ops. - Replace all "datasource" fields (object or string) across the dashboard with "${DS_PROMETHEUS}", skipping Grafana's internal annotation datasource objects ({"type":"datasource","uid":"grafana"}). By default, only objects are rewritten conservatively when they are Prometheus-like; use --all-sources to rewrite string datasources too.
+Description: Rework Grafana dashboard JSON files to standardize datasource usage.
+Functioning: Unwraps exported dashboards, ensures a datasource variable, and rewrites panel datasource fields.
+How to use: python3 rework_dashboards.py <input> [--output-dir DIR | --in-place] [--prom-only | --all-sources]
 
 ## update_readme.py
-Generate README listing all scripts with descriptions.
+Description: Generate README listing all scripts with descriptions.
+Functioning: Scans root for shell and Python scripts, extracts their description blocks, and writes README.md.
+How to use: Run `python update_readme.py` from the repository root.
 

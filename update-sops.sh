@@ -1,7 +1,9 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-# Iterate over all *.enc and *.env files in the tree and refresh their SOPS
-# encryption keys using `sops updatekeys`.
+# Description: Refresh SOPS encryption keys for all *.enc and *.env files recursively.
+# Functioning: Finds matching files, runs `sops updatekeys` on each, and returns to the starting directory.
+# How to use: Run from the repository root; requires `sops` in the PATH.
+
 DIR=$(pwd)
 echo "running from $DIR"
 shopt -s nullglob

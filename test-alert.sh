@@ -1,6 +1,8 @@
 #!/bin/bash
-# Send a test alert to a local Alertmanager instance, repeatedly firing until
-# the user resolves it, to verify alert delivery and routing.
+
+# Description: Send a test alert to a local Alertmanager to verify delivery and routing.
+# Functioning: Fires an alert, repeats until the user resolves it, and then sends a resolve notification.
+# How to use: Run without arguments or pass a severity as the first argument.
 url='http://localhost:9093/api/v2/alerts'
 
 declare -A ALERT_LABELS=(

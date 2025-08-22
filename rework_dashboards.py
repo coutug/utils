@@ -1,28 +1,8 @@
 #!/usr/bin/env python3
 """
-Rework Grafana dashboard JSON files:
-- If file has {"dashboard": {...}, "meta": {...}}, unwrap to just {...} (the "dashboard" content).
-- Ensure a templating variable of type "datasource" named DS_PROMETHEUS pointing to VictoriaMetrics-ops.
-- Replace all "datasource" fields (object or string) across the dashboard with "${DS_PROMETHEUS}",
-  skipping Grafana's internal annotation datasource objects ({"type":"datasource","uid":"grafana"}).
-  By default, only objects are rewritten conservatively when they are Prometheus-like; use --all-sources
-  to rewrite string datasources too.
-
-Usage examples:
-  # Process one file into a new file with suffix _reworked.json
-  python3 rework_dashboards.py path/to/file.json
-
-  # Process a whole directory recursively, write to outdir keeping structure
-  python3 rework_dashboards.py path/to/dir -o outdir
-
-  # Overwrite in place
-  python3 rework_dashboards.py path/to/dir --in-place
-
-  # Be conservative: only rewrite objects of type "prometheus" (leave strings intact)
-  python3 rework_dashboards.py file.json --prom-only
-
-  # Rewrite all datasources (strings and objects except annotations)
-  python3 rework_dashboards.py file.json --all-sources
+Description: Rework Grafana dashboard JSON files to standardize datasource usage.
+Functioning: Unwraps exported dashboards, ensures a datasource variable, and rewrites panel datasource fields.
+How to use: python3 rework_dashboards.py <input> [--output-dir DIR | --in-place] [--prom-only | --all-sources]
 """
 import argparse
 import json
