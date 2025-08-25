@@ -28,6 +28,7 @@ BASE = os.getenv("INCIDENT_API_BASE", "https://api.incident.io")
 TOKEN = os.getenv("INCIDENT_API_TOKEN")
 
 # Alertmanager config (only used when count > 0, or if you choose to resolve)
+ALERTMANAGER_ENABLE = os.getenv("ALERTMANAGER_ENABLE", "true")
 ALERTMANAGER_URL = os.getenv("ALERTMANAGER_URL", "http://vmalertmanager-vmks-victoria-metrics-k8s-stack.monitoring.svc")
 ALERTMANAGER_ROUTE = os.getenv("ALERTMANAGER_ROUTE", "/api/v2/alerts")
 ALERTMANAGER_TIMEOUT = float(os.getenv("ALERTMANAGER_TIMEOUT", "10"))
@@ -412,26 +413,25 @@ def main():
     # 5) Output & Alertmanager
     diff_count = len(missing)
 
-    if diff_count != 0:
-        # LOG #2 — Networks discovered for each component
-        networks_log = []
-        for comp_id in sorted(components_in_spm):
-            networks_log.append({
-                "component_id": comp_id,
-                "component_name": component_names.get(comp_id),
-                "networks": comp_to_discovered_networks.get(comp_id, [])
-            })
-        logger.info("Networks discovered for each component referenced in SPM: %s",
-                    json.dumps(networks_log, indent=2, ensure_ascii=False))
-
-
     if diff_count == 0:
         # As requested: only output the count when there is no difference
         print(json.dumps({"count": 0}, indent=2, ensure_ascii=False))
-        return
+        return # exit the function
+
+    # LOG #2 — Networks discovered for each component
+    networks_log = []
+    for comp_id in sorted(components_in_spm):
+        networks_log.append({
+            "component_id": comp_id,
+            "component_name": component_names.get(comp_id),
+            "networks": comp_to_discovered_networks.get(comp_id, [])
+        })
+    logger.info("Networks discovered for each component referenced in SPM: %s",
+                json.dumps(networks_log, indent=2, ensure_ascii=False))
 
     # Send alert to Alertmanager (only if configured)
-    send_alert_to_alertmanager(diff_count, missing)
+    if ALERTMANAGER_ENABLE == "true":
+        send_alert_to_alertmanager(diff_count, missing)
 
     # Detailed JSON output when differences exist
     result = {
