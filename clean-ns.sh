@@ -17,8 +17,8 @@ for resource in $(kubectl api-resources --verbs=list --namespaced -o name); do
 
     read -p "Do you want to delete? (y/n): " answer
     if [[ "$answer" != "y" && "$answer" != "Y" ]]; then
-        echo "Not deleting"
-        continue
+      echo "Not deleting"
+      continue
     fi
 
     kubectl delete "$resource" --all -n "$NS" --wait=false --ignore-not-found=true

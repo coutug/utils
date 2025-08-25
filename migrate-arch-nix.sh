@@ -13,17 +13,17 @@ INCLUDE_YAY=0
 
 while (( "$#" )); do
   case "$1" in
-    --yes|-y) CONFIRM=0; shift ;;
-    --dry-run) DRYRUN=1; shift ;;
-    --include-yay) INCLUDE_YAY=1; shift ;;
-    -h|--help)
-      echo "Usage: $0 [--yes|-y] [--dry-run] [--include-yay]"
-      exit 0
-      ;;
-    *)
-      echo "Unknown option: $1" >&2
-      exit 2
-      ;;
+  --yes|-y) CONFIRM=0; shift ;;
+  --dry-run) DRYRUN=1; shift ;;
+  --include-yay) INCLUDE_YAY=1; shift ;;
+  -h|--help)
+    echo "Usage: $0 [--yes|-y] [--dry-run] [--include-yay]"
+    exit 0
+    ;;
+  *)
+    echo "Unknown option: $1" >&2
+    exit 2
+    ;;
   esac
 done
 
@@ -175,7 +175,11 @@ if have_cmd yay; then
     # separate 'yay' from the rest
     declare -a NOYAY=() YAYLAST=()
     for p in "${TO_REMOVE[@]}"; do
-      if [[ "$p" == "yay" ]]; then YAYLAST+=("$p"); else NOYAY+=("$p"); fi
+      if [[ "$p" == "yay" ]]; then
+        YAYLAST+=("$p")
+      else
+        NOYAY+=("$p")
+      fi
     done
     TO_REMOVE=("${NOYAY[@]}" "${YAYLAST[@]}")
   fi
