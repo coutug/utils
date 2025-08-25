@@ -51,6 +51,9 @@ Description: Rework Grafana dashboard JSON files to standardize datasource usage
 Functioning: Unwraps exported dashboards, ensures a datasource variable, and rewrites panel datasource fields.
 How to use: python3 rework_dashboards.py <input> [--output-dir DIR | --in-place] [--prom-only | --all-sources]
 
+## sync-status-page.py
+======================= Chargement configuration =======================
+
 ## update_readme.py
 Description: Generate README listing all scripts with descriptions.
 Functioning: Scans root for shell and Python scripts, extracts their description blocks, and writes README.md.
