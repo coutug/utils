@@ -5,6 +5,7 @@ import sys
 import json
 import logging
 from collections import defaultdict
+from datetime import datetime, timezone
 
 import requests
 from dotenv import load_dotenv
@@ -25,6 +26,15 @@ logger = logging.getLogger("spm-checker")
 # ---- API config / Type & attribute names ----
 BASE = os.getenv("INCIDENT_API_BASE", "https://api.incident.io")
 TOKEN = os.getenv("INCIDENT_API_TOKEN")
+
+# Alertmanager config (only used when count > 0, or if you choose to resolve)
+ALERTMANAGER_URL = os.getenv("ALERTMANAGER_URL", "http://vmalertmanager-vmks-victoria-metrics-k8s-stack.monitoring.svc")
+ALERTMANAGER_ROUTE = os.getenv("ALERTMANAGER_ROUTE", "/api/v2/alerts")
+ALERTMANAGER_TIMEOUT = float(os.getenv("ALERTMANAGER_TIMEOUT", "10"))
+ALERTMANAGER_ALERTNAME = os.getenv("ALERTMANAGER_ALERTNAME", "IncidentStatusPageMapDrift")
+ALERTMANAGER_SEVERITY = os.getenv("ALERTMANAGER_SEVERITY", "warning")
+ALERTMANAGER_COMPONENT_LABEL = os.getenv("ALERTMANAGER_COMPONENT_LABEL", "monitoring")
+ALERTMANAGER_EXTRA_LABELS_JSON = os.getenv("ALERTMANAGER_EXTRA_LABELS_JSON", "")  # e.g. {"env":"prod"}
 
 # Logical type names — case-insensitive.
 TYPE_NAMES = {
@@ -219,6 +229,66 @@ def extract_array_custom(attr_value_obj, ext_index=None):
     return out
 
 
+# ===========================================
+# Alertmanager — send alert
+# ===========================================
+def send_alert_to_alertmanager(diff_count, missing):
+    """
+    Send an alert to Alertmanager (POST /api/v2/alerts) describing the drift.
+    Called only when diff_count > 0.
+    """
+    if not ALERTMANAGER_URL:
+        logger.info("ALERTMANAGER_URL is not set — skipping Alertmanager POST.")
+        return
+
+    labels = {
+        "alertname": ALERTMANAGER_ALERTNAME,
+        "severity": ALERTMANAGER_SEVERITY,
+        "component": ALERTMANAGER_COMPONENT_LABEL,
+    }
+    # Optional extra labels as JSON
+    if ALERTMANAGER_EXTRA_LABELS_JSON:
+        try:
+            labels.update(json.loads(ALERTMANAGER_EXTRA_LABELS_JSON))
+        except Exception as e:
+            logger.warning("ALERTMANAGER_EXTRA_LABELS_JSON invalid JSON: %s", e)
+
+    # Compose a readable preview list (limited)
+    MAX_LINES = int(os.getenv("ALERTMANAGER_ANNOTATION_MAX_LINES", "20"))
+    lines = []
+    for i, m in enumerate(missing[:MAX_LINES], start=1):
+        comp = f'{m.get("component_name") or m.get("component_id")}'
+        net  = f'{m.get("network_name") or m.get("network_id")}'
+        lines.append(f"{i}. {comp} ↔ {net}")
+    if len(missing) > MAX_LINES:
+        lines.append(f"... (+{len(missing)-MAX_LINES} more)")
+
+    annotations = {
+        "summary": f"{diff_count} Status Page Map mapping(s) missing",
+        "description": "\n".join(lines) if lines else "No details",
+    }
+    alert = {
+        "labels": labels,
+        "annotations": annotations,
+        "startsAt": datetime.now(timezone.utc).isoformat(),
+    }
+
+    url = ALERTMANAGER_URL.rstrip("/") + ALERTMANAGER_ROUTE
+    headers = {"Content-Type": "application/json"}
+
+    try:
+        r = requests.post(
+            url, json=[alert], headers=headers,
+            timeout=ALERTMANAGER_TIMEOUT, verify="false"
+        )
+        if r.status_code >= 300:
+            logger.error("Alertmanager POST %s -> %s: %s", url, r.status_code, r.text[:500])
+        else:
+            logger.info("Alert sent to Alertmanager (%s)", url)
+    except Exception as e:
+        logger.exception("Failed to POST to Alertmanager: %s", e)
+
+
 # =========
 # Program
 # =========
@@ -268,7 +338,7 @@ def main():
             component_names[comp_id] = comp_name
         components_in_spm.add(comp_id)
 
-        net_id, net_name = extract_single_custom(av.get(spm_network_attr_id), idx_network)
+        net_id, _ = extract_single_custom(av.get(spm_network_attr_id), idx_network)
         # net_id can be None if there is no network (expected case)
         spm_pairs[comp_id].add(net_id)
 
@@ -300,8 +370,6 @@ def main():
         nets_attr = (comp.get("attribute_values", {}) or {}).get(comp_networks_attr_id)
         nets = extract_array_custom(nets_attr, idx_network)  # list of (nid, nname, nlit)
 
-        # Resolution stats & logs
-        resolved = sum(1 for (nid, _, _) in nets if nid)
         unresolved = [(nlit or nname) for (nid, nname, nlit) in nets if not nid]
         if unresolved:
             logger.warning(
@@ -341,24 +409,37 @@ def main():
                     "network_name": nname,
                 })
 
-    # LOG #2 — Networks discovered for each component
-    networks_log = []
-    for comp_id in sorted(components_in_spm):
-        networks_log.append({
-            "component_id": comp_id,
-            "component_name": component_names.get(comp_id),
-            "networks": comp_to_discovered_networks.get(comp_id, [])
-        })
-    logger.info("Networks discovered for each component referenced in SPM: %s",
-                json.dumps(networks_log, ensure_ascii=False))
+    # 5) Output & Alertmanager
+    diff_count = len(missing)
 
-    # 5) Final JSON output (stdout)
+    if diff_count != 0:
+        # LOG #2 — Networks discovered for each component
+        networks_log = []
+        for comp_id in sorted(components_in_spm):
+            networks_log.append({
+                "component_id": comp_id,
+                "component_name": component_names.get(comp_id),
+                "networks": comp_to_discovered_networks.get(comp_id, [])
+            })
+        logger.info("Networks discovered for each component referenced in SPM: %s",
+                    json.dumps(networks_log, indent=2, ensure_ascii=False))
+
+
+    if diff_count == 0:
+        # As requested: only output the count when there is no difference
+        print(json.dumps({"count": 0}, indent=2, ensure_ascii=False))
+        return
+
+    # Send alert to Alertmanager (only if configured)
+    send_alert_to_alertmanager(diff_count, missing)
+
+    # Detailed JSON output when differences exist
     result = {
-        "count": len(missing),
+        "count": diff_count,
         "missing_component_network_mappings": missing,
         "unresolved_networks": unresolved_all,  # useful to fix inconsistent external_ids
         "stats": {
-            "status_page_map_entries": count_spm,
+            "status_page_map_entries": sum(len(v) for v in spm_pairs.values()),
             "unique_components_in_spm": len(components_in_spm),
         }
     }
