@@ -11,12 +11,21 @@ CONFIRM=1
 DRYRUN=0
 INCLUDE_YAY=0
 
-while (( "$#" )); do
+while (("$#")); do
   case "$1" in
-    --yes|-y) CONFIRM=0; shift ;;
-    --dry-run) DRYRUN=1; shift ;;
-    --include-yay) INCLUDE_YAY=1; shift ;;
-    -h|--help)
+    --yes | -y)
+      CONFIRM=0
+      shift
+      ;;
+    --dry-run)
+      DRYRUN=1
+      shift
+      ;;
+    --include-yay)
+      INCLUDE_YAY=1
+      shift
+      ;;
+    -h | --help)
       echo "Usage: $0 [--yes|-y] [--dry-run] [--include-yay]"
       exit 0
       ;;
@@ -27,13 +36,13 @@ while (( "$#" )); do
   esac
 done
 
-have_cmd() { command -v "$1" >/dev/null 2>&1; }
+have_cmd() { command -v "$1" > /dev/null 2>&1; }
 
 # 1) Retrieve explicitly installed Arch packages (AUR included)
 if have_cmd yay; then
-  mapfile -t ARCH_PKGS < <(yay -Qqe 2>/dev/null | sort -u)
+  mapfile -t ARCH_PKGS < <(yay -Qqe 2> /dev/null | sort -u)
 elif have_cmd pacman; then
-  mapfile -t ARCH_PKGS < <(pacman -Qqe 2>/dev/null | sort -u)
+  mapfile -t ARCH_PKGS < <(pacman -Qqe 2> /dev/null | sort -u)
 else
   echo "Error: neither 'yay' nor 'pacman' found in PATH." >&2
   exit 1
@@ -49,22 +58,22 @@ fi
 # Keep only the name without version.
 mapfile -t HM_PKGS < <(
   home-manager packages \
-  | sed -E 's#.*/##' \
-  | sed -E 's/\.drv$//' \
-  | sed -E 's/-[0-9][0-9A-Za-z._+~-]*$//' \
-  | sed '/^$/d' \
-  | sort -u
+    | sed -E 's#.*/##' \
+    | sed -E 's/\.drv$//' \
+    | sed -E 's/-[0-9][0-9A-Za-z._+~-]*$//' \
+    | sed '/^$/d' \
+    | sort -u
 )
 
 # 3) Mapping Nix -> Arch for divergent names
 #    Add personal mappings here if needed.
 declare -A MAP_NIX_TO_ARCH=(
   # Nix                  Arch
-  [kubernetes-helm]=helm
-  [yq-go]=go-yq
-  [zoom-us]=zoom
-  [kubelogin-oidc]=kubelogin
-  [qbittorrent-enhanced]=qbittorrent
+  [kubernetes - helm]=helm
+  [yq - go]=go-yq
+  [zoom - us]=zoom
+  [kubelogin - oidc]=kubelogin
+  [qbittorrent - enhanced]=qbittorrent
 )
 
 # Set of Arch packages for O(1) lookup
@@ -163,8 +172,11 @@ fi
 if [[ $CONFIRM -ne 0 ]]; then
   read -r -p "Confirm removal via 'yay -Rns'? [y/N] " ans
   case "$ans" in
-    y|Y|yes|YES) ;;
-    *) echo "Cancelled."; exit 0 ;;
+    y | Y | yes | YES) ;;
+    *)
+      echo "Cancelled."
+      exit 0
+      ;;
   esac
 fi
 

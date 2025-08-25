@@ -12,8 +12,8 @@ FOLDER=dashboard-result
 mkdir -p "$FOLDER"
 
 curl -s "https://${GRAFANA_AUTH}@${GRAFANA_URL}/apis/dashboard.grafana.app/v1beta1/namespaces/default/dashboards?limit=1" \
-| jq -c '.items[] | {title: .spec.title, spec: .spec}' \
-| while IFS= read -r dash; do
+  | jq -c '.items[] | {title: .spec.title, spec: .spec}' \
+  | while IFS= read -r dash; do
     title=$(echo "$dash" | jq -r '.title' | sed 's/ /-/g')
     echo "$dash" | jq '.spec' > "$FOLDER/$title.json"
   done

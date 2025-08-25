@@ -30,7 +30,7 @@ send_alert() {
   done
   labels_json+="}"
 
-  cat <<EOF | curl -s -X POST $url -H "Content-Type: application/json" -d @-
+  cat << EOF | curl -s -X POST $url -H "Content-Type: application/json" -d @-
 [
   {
     "status": "$status",
