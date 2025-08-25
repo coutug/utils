@@ -30,21 +30,21 @@ if ! command -v "$HEY_BIN" >/dev/null 2>&1; then
 fi
 
 while true; do
-    for url in "${URLS[@]}"; do
-      ts="$(date -Is)"
-      # Run hey (suppress the progress bar); capture output
-      out="$("$HEY_BIN" --disable-keepalive -n "$NREQ" -c "$CONCURRENCY" "$url" 2>&1 || true)"
+  for url in "${URLS[@]}"; do
+    ts="$(date -Is)"
+    # Run hey (suppress the progress bar); capture output
+    out="$("$HEY_BIN" --disable-keepalive -n "$NREQ" -c "$CONCURRENCY" "$url" 2>&1 || true)"
 
-      # Parse the HTTP status code distribution
-      # Grab lines from the "Status code distribution:" block
-      status_block="$(printf "%s\n" "$out" \
-        | awk '/Status code distribution:/{f=1;print;next} f&&/^[[:space:]]*\[[0-9]{3}\]/{print} f&&!/^[[:space:]]*\[[0-9]{3}\]/{ if(NR>1) exit }')"
+    # Parse the HTTP status code distribution
+    # Grab lines from the "Status code distribution:" block
+    status_block="$(printf "%s\n" "$out" \
+      | awk '/Status code distribution:/{f=1;print;next} f&&/^[[:space:]]*\[[0-9]{3}\]/{print} f&&!/^[[:space:]]*\[[0-9]{3}\]/{ if(NR>1) exit }')"
 
-      total=0
-      ok200=0
+    total=0
+    ok200=0
 
-      # Extract "  [200] 12 responses" => code=200, cnt=12
-      while read -r code cnt _; do
+    # Extract "  [200] 12 responses" => code=200, cnt=12
+    while read -r code cnt _; do
       [[ -z "${code:-}" ]] && continue
       # code format "[200]"
       code="${code#[}"
@@ -57,21 +57,21 @@ while true; do
       fi
     done < <(printf "%s\n" "$status_block" | sed -n 's/^[[:space:]]*\[\([0-9]\{3\}\)\][[:space:]]*\([0-9]\+\).*/[\1] \2/p')
 
-      # If parsing failed, treat as an error
-      if [[ "$total" -eq 0 ]]; then
-        echo "[$ts] ❌ $url → unable to validate responses (hey may have failed)"
-        printf "%s\n" "$out" | sed -n '1,120p' >&2
-      elif [[ "$ok200" -eq "$total" ]]; then
-        echo "[$ts] ✅ $url → OK (all $ok200/$total responses are 200)"
-      else
-        echo "[$ts] ⚠️  $url → WARNING (non-200 codes detected: $((total-ok200))/$total)"
-        # Show relevant snippet
-        printf "%s\n" "$status_block"
-        # If present, display the error block from hey
-        err_block="$(printf "%s\n" "$out" | awk '/Error distribution:/{f=1;print;next} f&&/^[[:space:]]*\[[0-9]+\]/{print} f&&!/^[[:space:]]*\[[0-9]+\]/{ if(NR>1) exit }')"
-        [[ -n "$err_block" ]] && printf "%s\n" "$err_block"
-      fi
+    # If parsing failed, treat as an error
+    if [[ "$total" -eq 0 ]]; then
+      echo "[$ts] ❌ $url → unable to validate responses (hey may have failed)"
+      printf "%s\n" "$out" | sed -n '1,120p' >&2
+    elif [[ "$ok200" -eq "$total" ]]; then
+      echo "[$ts] ✅ $url → OK (all $ok200/$total responses are 200)"
+    else
+      echo "[$ts] ⚠️  $url → WARNING (non-200 codes detected: $((total-ok200))/$total)"
+      # Show relevant snippet
+      printf "%s\n" "$status_block"
+      # If present, display the error block from hey
+      err_block="$(printf "%s\n" "$out" | awk '/Error distribution:/{f=1;print;next} f&&/^[[:space:]]*\[[0-9]+\]/{print} f&&!/^[[:space:]]*\[[0-9]+\]/{ if(NR>1) exit }')"
+      [[ -n "$err_block" ]] && printf "%s\n" "$err_block"
+    fi
 
-      sleep "$SLEEP_SEC"
+    sleep "$SLEEP_SEC"
   done
 done
