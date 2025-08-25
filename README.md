@@ -52,7 +52,7 @@ Functioning: Unwraps exported dashboards, ensures a datasource variable, and rew
 How to use: python3 rework_dashboards.py <input> [--output-dir DIR | --in-place] [--prom-only | --all-sources]
 
 ## sync-status-page.py
-======================= Chargement configuration =======================
+======================= Configuration loading =======================
 
 ## update_readme.py
 Description: Generate README listing all scripts with descriptions.
