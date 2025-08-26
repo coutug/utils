@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
 Description: Generate README listing all scripts with descriptions.
-Functioning: Scans root for shell and Python scripts, extracts their description blocks, and writes README.md.
-How to use: Run `python update_readme.py` from the repository root.
+Functioning: Scans the bash/ and python/ folders for scripts, extracts their description blocks, and writes README.md.
+How to use: Run `python python/update_readme.py` from the repository root.
 """
 
 import ast
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent
+REPO_ROOT = Path(__file__).resolve().parent.parent
 README_PATH = REPO_ROOT / "README.md"
 
 # The static header that will be kept at the top of README.md
@@ -52,12 +52,22 @@ def extract_description(path: Path) -> str:
   return "No description available"
 
 
+def collect_scripts() -> list[Path]:
+  """Return all shell and Python scripts under bash/ and python/ folders."""
+  scripts: list[Path] = []
+  for folder in (REPO_ROOT / "bash", REPO_ROOT / "python"):
+    if folder.exists():
+      scripts.extend(sorted(folder.rglob("*.sh")))
+      scripts.extend(sorted(folder.rglob("*.py")))
+  return scripts
+
+
 def generate_readme_content() -> str:
-  scripts = sorted(Path(REPO_ROOT).glob("*.sh")) + sorted(Path(REPO_ROOT).glob("*.py"))
   sections = []
-  for script in scripts:
+  for script in collect_scripts():
     desc = extract_description(script)
-    sections.append(f"## {script.name}\n{desc}\n")
+    rel = script.relative_to(REPO_ROOT)
+    sections.append(f"## {rel}\n{desc}\n")
   return README_HEADER + "\n" + "\n".join(sections) + "\n"
 
 
