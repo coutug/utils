@@ -6,15 +6,15 @@
 url='http://localhost:9093/api/v2/alerts'
 
 declare -A ALERT_LABELS=(
-  [alertname]="TEST-tokenAPI"
-  [alertgroup]="TEST-tokenAPI"
-  [component]="token-api-sink"
+  [alertname]="TEST-firehose"
+  [alertgroup]="TEST-firehose"
+  [component]="firehose-exporter"
   [cluster]="riv-prod1"
   [network]="avalanche"
 )
 
 summary='Testing summary!'
-default_severity='critical'
+default_severity='warning'
 
 send_alert() {
   local status=$1
