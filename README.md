@@ -46,6 +46,9 @@ Description: Convert an Icinga-style .conf service definition using a Prometheus
 Functioning: Extracts metric details and thresholds from the .conf file, cleans label matchers, and builds a VMRule expression.
 How to use: python3 conf2vmrule.py /path/to/myAlert.conf [--write | -o out.yaml]
 
+## python/extract-gh-issues.py
+Usage: python extract_projectv2_issues_export.py     --org-v2-project eosnationftw:7 --org-v2-project pinax-network:12     --out export.csv [--users alice,bob] Requires: Python 3.9+, requests, a GitHub token via --token or $GITHUB_TOKEN.
+
 ## python/rework_dashboards.py
 Description: Rework Grafana dashboard JSON files to standardize datasource usage.
 Functioning: Unwraps exported dashboards, ensures a datasource variable, and rewrites panel datasource fields.
