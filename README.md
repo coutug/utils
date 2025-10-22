@@ -16,6 +16,11 @@ Description: Uninstall Arch packages that are also managed by Home‑Manager.
 Functioning: Collects Arch and Home‑Manager packages, maps names, optionally prompts, and removes duplicates.
 How to use: Requires yay (or pacman) and home-manager. Options: --yes/-y skip confirmation, --dry-run show only, --include-yay allow removing 'yay'.
 
+## bash/remove-crd-finalizers.sh
+Description: Remove finalizers from every namespaced CRD instance found in a namespace.
+Functioning: Lists namespaced resources, retrieves objects in the namespace, and patches each to clear metadata.finalizers.
+How to use: Run with the namespace as the first argument. Example: ./bash/remove-crd-finalizers.sh my-namespace
+
 ## bash/rename.sh
 Description: Rename all files and directories under ./the-graph to lowercase without overwriting existing entries.
 Functioning: Traverses the directory tree and renames each item to its lowercase counterpart if the destination does not exist.
