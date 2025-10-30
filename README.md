@@ -2,9 +2,9 @@
 Useful scripts collection built along the journey
 
 ## bash/clean-ns.sh
-Description: Interactively delete all namespaced Kubernetes resources in a namespace and clear finalizers.
-Functioning: Lists each resource type, prompts for deletion, deletes resources, and removes finalizers.
-How to use: Run with the namespace as the first argument.
+Description: Remove finalizers from every namespaced CRD instance found in a namespace.
+Functioning: Lists namespaced resources, retrieves objects in the namespace, and patches each to clear metadata.finalizers.
+How to use: Run with the namespace as the first argument. Example: ./bash/remove-crd-finalizers.sh my-namespace
 
 ## bash/extract-dashboards.sh
 Description: Fetch all Grafana dashboards via the Grafana Operator API and save them as JSON files.
@@ -15,11 +15,6 @@ How to use: Set GRAFANA_AUTH, GRAFANA_URL, and FOLDER variables then run the scr
 Description: Uninstall Arch packages that are also managed by Home‑Manager.
 Functioning: Collects Arch and Home‑Manager packages, maps names, optionally prompts, and removes duplicates.
 How to use: Requires yay (or pacman) and home-manager. Options: --yes/-y skip confirmation, --dry-run show only, --include-yay allow removing 'yay'.
-
-## bash/remove-crd-finalizers.sh
-Description: Remove finalizers from every namespaced CRD instance found in a namespace.
-Functioning: Lists namespaced resources, retrieves objects in the namespace, and patches each to clear metadata.finalizers.
-How to use: Run with the namespace as the first argument. Example: ./bash/remove-crd-finalizers.sh my-namespace
 
 ## bash/rename.sh
 Description: Rename all files and directories under ./the-graph to lowercase without overwriting existing entries.
