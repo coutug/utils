@@ -1,31 +1,42 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-# Description: Interactively delete all namespaced Kubernetes resources in a namespace and clear finalizers.
-# Functioning: Lists each resource type, prompts for deletion, deletes resources, and removes finalizers.
-# How to use: Run with the namespace as the first argument.
+# Description: Remove finalizers from every namespaced CRD instance found in a namespace.
+# Functioning: Lists namespaced resources, retrieves objects in the namespace, and patches each to clear metadata.finalizers.
+# How to use: Run with the namespace as the first argument. Example: ./bash/remove-crd-finalizers.sh my-namespace
 
-NS=$1
+if [[ $# -lt 1 ]]; then
+  echo "Usage: $0 <namespace>" >&2
+  exit 1
+fi
 
-echo "Namespace: $NS"
+NAMESPACE=$1
+PATCH_PAYLOAD='{"metadata":{"finalizers":null}}'
 
-for resource in $(kubectl api-resources --verbs=list --namespaced -o name); do
-  echo "-> Getting: $resource"
-  resources=$(kubectl get "$resource" -n "$NS" --ignore-not-found=true)
+if ! command -v kubectl >/dev/null 2>&1; then
+  echo "kubectl is required in PATH." >&2
+  exit 1
+fi
 
-  if [ -n "$resources" ]; then
-    echo "$resources"
+if ! kubectl get namespace "$NAMESPACE" >/dev/null 2>&1; then
+  echo "Namespace '$NAMESPACE' not found." >&2
+  exit 1
+fi
 
-    read -p "Do you want to delete? (y/n): " answer
-    if [[ "$answer" != "y" && "$answer" != "Y" ]]; then
-      echo "Not deleting"
-      continue
+resources=$(kubectl api-resources --namespaced=true --verbs=list | awk 'NR>1 {print $1}' | grep -Ev '^(events)$')
+
+for resource in $resources; do
+  [[ -z "$resource" ]] && continue
+
+  instances=$(kubectl get "$resource" -n "$NAMESPACE" --ignore-not-found -o name 2>/dev/null || true)
+  [[ -z "$instances" ]] && continue
+
+  echo "Processing $resource in namespace $NAMESPACE"
+
+  for instance in $instances; do
+    echo "  - Patching $instance"
+    if ! kubectl patch "$instance" -n "$NAMESPACE" --type=merge -p "$PATCH_PAYLOAD" >/dev/null && kubectl delete "$instance" -n "$NAMESPACE"; then
+      echo "    Failed to patch $instance" >&2
     fi
-
-    kubectl delete "$resource" --all -n "$NS" --wait=false --ignore-not-found=true
-
-    for obj in $(kubectl get "$resource" -n "$NS" -o jsonpath='{.items[*].metadata.name}'); do
-      echo "Patch finalizers for $resource/$obj"
-      kubectl patch "$resource" "$obj" -n "$NS" -p '{"metadata":{"finalizers":null}}' --type=merge
-    done
-  fi
+  done
 done
