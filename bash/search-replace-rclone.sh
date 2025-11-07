@@ -2,7 +2,9 @@
 
 set -euo pipefail
 
-# Usage : ./script.sh <remote_path> <tmp_filename> <search_value> <replace_value>
+# Description: Perform an in-place search/replace on a remote file accessible via rclone.
+# Functioning: Copies the remote file to a local temp path, runs a sed substitution, then copies the result back to the remote.
+# How to use: ./bash/search-replace-rclone.sh <remote_path> <tmp_filename> <search_value> <replace_value>
 
 REMOTE_PATH="${1:?Missing remote path (e.g. remote:bucket/path/file.txt)}"
 TMP_FILENAME="${2:?Missing tmp filename (e.g. /tmp/file.txt)}"
