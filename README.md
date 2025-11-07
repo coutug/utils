@@ -21,6 +21,9 @@ Description: Rename all files and directories under ./the-graph to lowercase wit
 Functioning: Traverses the directory tree and renames each item to its lowercase counterpart if the destination does not exist.
 How to use: Run without arguments from the repository root; it operates on ./the-graph.
 
+## bash/search-replace-rclone.sh
+Usage : ./script.sh <remote_path> <tmp_filename> <search_value> <replace_value>
+
 ## bash/status-page-sync.sh
 Description: Download a single Grafana dashboard and save it as JSON for status page syncing.
 Functioning: Queries the Grafana Operator API for one dashboard and writes it to FOLDER/<title>.json.
