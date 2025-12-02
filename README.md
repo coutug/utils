@@ -23,8 +23,8 @@ How to use: Run without arguments from the repository root; it operates on ./the
 
 ## bash/search-replace-rclone.sh
 Description: Perform an in-place search/replace on a remote file accessible via rclone.
-Functioning: Copies the remote file to a local temp path, runs a sed substitution, then copies the result back to the remote.
-How to use: ./bash/search-replace-rclone.sh <remote_path> <tmp_filename> <search_value> <replace_value>
+Functioning: Copies the remote file to a ott-mgt temp path, runs a sed substitution, then copies the result back to the remote.
+How to use: ./bash/search-replace-rclone.sh <remote_path> <search_value> <replace_value>
 
 ## bash/status-page-sync.sh
 Description: Download a single Grafana dashboard and save it as JSON for status page syncing.
