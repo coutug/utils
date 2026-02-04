@@ -3,7 +3,7 @@
 # Description: Send a test alert to a local Alertmanager to verify delivery and routing.
 # Functioning: Fires an alert, repeats until the user resolves it, and then sends a resolve notification.
 # How to use: Run without arguments or pass a severity as the first argument.
-url='http://localhost:9093/api/v2/alerts'
+url='http://vmalertmanager.ott-monitor1.pinax.io/api/v2/alerts'
 
 declare -A ALERT_LABELS=(
   [alertname]="TEST-firehose"
